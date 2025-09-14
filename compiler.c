@@ -18,7 +18,7 @@
 
 // types
 #define N   0
-#define ID  1
+#define ID  1 // identifiers not implemented yet
 #define PR  2
 #define OP  3
 
