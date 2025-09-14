@@ -16,9 +16,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-// types
+// types (identifiers not yet implemented)
 #define N   0
-#define ID  1 // identifiers not implemented yet
+#define ID  1
 #define PR  2
 #define OP  3
 
