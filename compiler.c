@@ -132,6 +132,7 @@ int term(){
 }
 
 int expr_prime(){
+  if(lst[ind]==NULL){return 0;}
   if(lst[ind]->type==OP){
     ind++;
     if(term()==0){return expr_prime();}
@@ -139,7 +140,7 @@ int expr_prime(){
   if((lst[ind]->type==PR)&&(lst[ind]->val==1)){
     ind++;
     return 0;
-  }else if(lst[ind]==NULL){return 0;}
+  }
   return 1;
 }
 
@@ -215,14 +216,13 @@ int main(){
     token *tkn=lst[i];
     //printf("%d: %d %d \n",i,tkn->type,tkn->val);
   }
-  /*if(parse()){
+  if(parse()){
     printf("ERR\n");
 		exit(1);
   }else{
     printf("valid syntax\n");
 		assemble();
-  }*/
-	assemble();
+  }
 
 	char *const arg1[]={"touch","test.o",NULL};
 	char *const arg2[]={"touch","test",NULL};
