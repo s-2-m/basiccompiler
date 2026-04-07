@@ -54,67 +54,45 @@ void assemble(){
   fprintf(f,"%s","\t.text\n");
   fprintf(f,"%s","\t.globl _start\n");
   fprintf(f,"%s","_start:\n");
-  fprintf(f,"%s","\tmov $0, %rdi\n");
-  token **stack=malloc(max*sizeof(token*));
-	int first=1,p=0,i=0,k=0,sym,num;
-	token *t;
-
-	void domath(){
-		if(first){
-			first=0;
-			k--;
-			fprintf(f,"\tmov $%d, %rdi\n",stack[k]->val);
-		}
-		if(k!=0){
-      //debug val and sym
-      int sym,num;
-      if(p==0){
-        k--;
-        sym=stack[k]->val;
-        k--;
-        num=stack[k]->val;
-        //printf("p %d %d\n",sym,num);
-      }else{
-        k--;
-        num=stack[k]->val;
-        k--;
-        sym=stack[k]->val;
-        //printf("!p %d %d\n",sym,num);
+  token *stack[max];
+  int k=0;
+  int initialized=0;
+  for(int i=0;lst[i]!=NULL;i++){
+    token *t=lst[i];
+    if(t->type==N||t->type==OP){
+      stack[k++]=t;
+    }else if(t->type==PR&&t->val==1){
+      int num2=stack[--k]->val;
+      int op=stack[--k]->val;
+      int num1=stack[--k]->val;
+	  if(!initialized){
+        fprintf(f,"\tmov $%d, %%rdi\n", num1);
+        initialized=1;
+	  }
+      switch(op){
+        case ADD:
+          fprintf(f,"\tadd $%d, %%rdi\n", num2);
+          break;
+        case SUB:
+          fprintf(f,"\tsub $%d, %%rdi\n", num2);
+          break;
+        case MUL:
+          fprintf(f,"\tmov $%d, %%rax\n", num2);
+          fprintf(f,"\tmul %%rdi\n");
+          fprintf(f,"\tmov %%rax, %%rdi\n");
+          break;
+        case DIV:
+          fprintf(f,"\tmov %%rdi, %%rax\n");
+          fprintf(f,"\tmov $%d, %%rdi\n", num2);
+          fprintf(f,"\txor %%rdx, %%rdx\n");
+          fprintf(f,"\tdiv %%rdi\n");
+          fprintf(f,"\tmov %%rax, %%rdi\n");
+          break;
       }
-			if(sym==0){
-				fprintf(f,"\tadd $%d, %rdi\n",num);
-			}else if(sym==1){
-				fprintf(f,"\tsub $%d, %rdi\n",num);
-			}else if(sym==2){
-				fprintf(f,"\tmov $%d, %rax\n",num);
-				fprintf(f,"%s","\tmul %rdi\n");
-				fprintf(f,"%s","\tmov %rax, %rdi\n");
-			}else if(sym==3){
-				fprintf(f,"%s","\tmov %rdi, %rax\n");
-				fprintf(f,"\tmov $%d, %rdi\n",num);
-				fprintf(f,"%s","\txor %rdx, %rdx\n");
-				fprintf(f,"%s","\tdiv %rdi\n");
-				fprintf(f,"%s","\tmov %rax, %rdi\n");
-			}
-		}
-	}
-
-	for(int i=0;lst[i]!=NULL;i++){
-		token *t=lst[i];
-		if(t->type==N||t->type==OP){
-			//printf("number val: %d, k: %d\n",t->val,k);
-			stack[k++]=t;
-		}
-		if(t->type==PR&&t->val==1){
-      //if(k>0){printf("%d\n",stack[k-1]->val);}
-			domath();
-      p=1;
-		}
-	}
-  //printf("k : %d, f %d, p %d\n",k,first,p);
-	while(k!=0){
-		domath();
-	}
+      static token dummy = {N, 0};
+      stack[k++] = &dummy;
+    }
+  }
   fprintf(f,"%s","\tmov $60, %rax\n");
   fprintf(f,"%s","syscall\n");
   fclose(f);
