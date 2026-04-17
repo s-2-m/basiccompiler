@@ -1,5 +1,5 @@
 /*
- * RUDIMENTARY JIT COMPILER FOR MATHEMATICAL EXPRESSIONS
+ * RUDIMENTARY JIT COMPILER THAT DOES MATH
  *
  * TAKES POSITIVE NUMBERS OR SYMBOLS: 
    '(', ')', '+', '-', '*', '/'
@@ -9,8 +9,8 @@
  * NUMBERS MUST BE POSITIVE
  *
  * */
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -28,20 +28,15 @@
 #define MUL 2
 #define DIV 3
 
+#define max 256
+
 typedef struct{
   int type;
   int val;
 }token;
 
 token **lst;
-size_t max=256;
-int ind;
 FILE* f;
-
-int term();
-int expr();
-int expr_prime();
-
 
 int count=1;
 void flag(){
@@ -60,8 +55,9 @@ void assemble(){
   for(int i=0;lst[i]!=NULL;i++){
     token *t=lst[i];
     if(t->type==N||t->type==OP){
-      stack[k++]=t;
     }else if(t->type==PR&&t->val==1){
+      stack[k++]=t;
+	  pop:
       int num2=stack[--k]->val;
       int op=stack[--k]->val;
       int num1=stack[--k]->val;
@@ -93,45 +89,53 @@ void assemble(){
       stack[k++] = &dummy;
     }
   }
+  if(k>1)goto pop;
   fprintf(f,"%s","\tmov $60, %rax\n");
   fprintf(f,"%s","syscall\n");
   fclose(f);
 }
 
-int term(){
-  if((lst[ind]->type==PR)&&(lst[ind]->val==0)){
-    ind++;
-    return expr();
-  }else if(lst[ind]->type==N){
-    ind++;
-    return 0;
-  }
-  return 1;
-}
-
-int expr_prime(){
-  if(lst[ind]==NULL){return 0;}
-  if(lst[ind]->type==OP){
-    ind++;
-    if(term()==0){return expr_prime();}
-  }
-  if((lst[ind]->type==PR)&&(lst[ind]->val==1)){
-    ind++;
-    return 0;
-  }
-  return 1;
-}
-
-int expr(){
-  if(lst[ind]==NULL){return 0;}
-  if(term()){return 1;}
-  return expr_prime();
-}
-
 int parse(){
-  ind=0;
+  int term();
+  int expr();
+  int expr_prime();
+  int term(){
+    if((lst[ind]->type==PR)&&(lst[ind]->val==0)){
+      ind++;
+	  cnt++;
+	  prevN=0;
+      return expr();
+    }else if(lst[ind]->type==N){
+      ind++;
+	  prevN=1;
+      return 0;
+    }
+    return 1;
+  }
+  int expr_prime(){
+    if(lst[ind]==NULL)return 0;
+    if(lst[ind]->type==OP){
+      ind++;
+	  prevN=0;
+      if(term()==0)return expr_prime();
+    }
+    if((lst[ind]->type==PR)&&(lst[ind]->val==1)&&prevN){
+      ind++;
+	  cnt--;
+	  prevN=0;
+      return 0;
+    }
+  return 1;
+  }
+  int expr(){
+    if(lst[ind]==NULL&&cnt==0)return 0;
+    if(term())return 1;
+    return expr_prime();
+  }
+  
+  int ind=0,cnt=0,prevN;
   printf("parsing...\n");
-  if(expr()==0&&lst[ind]==NULL){return 0;}
+  if(expr()==0&&lst[ind]==NULL)return 0;
   return 1;
 }
 
