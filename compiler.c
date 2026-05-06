@@ -36,7 +36,6 @@ typedef struct{
 }token;
 
 token **lst;
-FILE* f;
 
 int count=1;
 void flag(){
@@ -44,99 +43,99 @@ void flag(){
 }
 
 void assemble(){
-  printf("generating assembly...\n");
-  f=fopen("output.asm","w+");
-  fprintf(f,"%s","\t.text\n");
-  fprintf(f,"%s","\t.globl _start\n");
-  fprintf(f,"%s","_start:\n");
-  token *stack[max];
-  int k=0;
-  int initialized=0;
-  for(int i=0;lst[i]!=NULL;i++){
-    token *t=lst[i];
-    if(t->type==N||t->type==OP){
-    }else if(t->type==PR&&t->val==1){
-      stack[k++]=t;
-	  pop:
-      int num2=stack[--k]->val;
-      int op=stack[--k]->val;
-      int num1=stack[--k]->val;
-	  if(!initialized){
-        fprintf(f,"\tmov $%d, %%rdi\n", num1);
-        initialized=1;
-	  }
-      switch(op){
-        case ADD:
-          fprintf(f,"\tadd $%d, %%rdi\n", num2);
-          break;
-        case SUB:
-          fprintf(f,"\tsub $%d, %%rdi\n", num2);
-          break;
-        case MUL:
-          fprintf(f,"\tmov $%d, %%rax\n", num2);
-          fprintf(f,"\tmul %%rdi\n");
-          fprintf(f,"\tmov %%rax, %%rdi\n");
-          break;
-        case DIV:
-          fprintf(f,"\tmov %%rdi, %%rax\n");
-          fprintf(f,"\tmov $%d, %%rdi\n", num2);
-          fprintf(f,"\txor %%rdx, %%rdx\n");
-          fprintf(f,"\tdiv %%rdi\n");
-          fprintf(f,"\tmov %%rax, %%rdi\n");
-          break;
-      }
-      static token dummy = {N, 0};
-      stack[k++] = &dummy;
-    }
-  }
-  if(k>1)goto pop;
+	FILE* f;
+	printf("generating assembly...\n");
+	f=fopen("output.asm","w+");
+	fprintf(f,"%s","\t.text\n");
+	fprintf(f,"%s","\t.globl _start\n");
+	fprintf(f,"%s","_start:\n");
+	token *stack[max];
+	int k=0;
+	int initialized=0;
+	for(int i=0;lst[i]!=NULL;i++){
+		token *t=lst[i];
+		if(t->type==N||t->type==OP){
+			stack[k++]=t;
+		}else if(t->type==PR&&t->val==1){
+pop:
+			int num2=stack[--k]->val;
+			int op=stack[--k]->val;
+			int num1=stack[--k]->val;
+			if(!initialized){
+				fprintf(f,"\tmov $%d, %%rdi\n", num1);
+				initialized=1;
+			}
+			switch(op){
+				case ADD:
+					fprintf(f,"\tadd $%d, %%rdi\n", num2);
+					break;
+				case SUB:
+					fprintf(f,"\tsub $%d, %%rdi\n", num2);
+					break;
+				case MUL:
+					fprintf(f,"\tmov $%d, %%rax\n", num2);
+					fprintf(f,"\tmul %%rdi\n");
+					fprintf(f,"\tmov %%rax, %%rdi\n");
+					break;
+				case DIV:
+					fprintf(f,"\tmov %%rdi, %%rax\n");
+					fprintf(f,"\tmov $%d, %%rdi\n", num2);
+					fprintf(f,"\txor %%rdx, %%rdx\n");
+					fprintf(f,"\tdiv %%rdi\n");
+					fprintf(f,"\tmov %%rax, %%rdi\n");
+					break;
+			}
+			static token dummy = {N, 0};
+			stack[k++] = &dummy;
+		}
+	}
+	if(k>1){goto pop;}
   fprintf(f,"%s","\tmov $60, %rax\n");
   fprintf(f,"%s","syscall\n");
   fclose(f);
 }
 
+int expr();
+int expr_prime();
+int term();
+int cnt=0,prevN,ind=0;
+int term(){
+	if((lst[ind]->type==PR)&&(lst[ind]->val==0)){
+		ind++;
+		cnt++;
+		prevN=0;
+		return expr();
+	}else if(lst[ind]->type==N){
+		ind++;
+		prevN=1;
+		return 0;
+	}
+	return 1;
+}
+int expr_prime(){
+	if(lst[ind]==NULL)return 0;
+	if(lst[ind]->type==OP){
+		ind++;
+		prevN=0;
+		if(term()==0)return expr_prime();
+	}
+	if(lst[ind]&&(lst[ind]->type==PR)&&(lst[ind]->val==1)&&prevN){
+		ind++;
+		cnt--;
+		prevN=0;
+		return 0;
+	}
+	return 1;
+}
+int expr(){
+	if(lst[ind]==NULL&&cnt==0)return 0;
+	if(term())return 1;
+	return expr_prime();
+}
 int parse(){
-  int term();
-  int expr();
-  int expr_prime();
-  int term(){
-    if((lst[ind]->type==PR)&&(lst[ind]->val==0)){
-      ind++;
-	  cnt++;
-	  prevN=0;
-      return expr();
-    }else if(lst[ind]->type==N){
-      ind++;
-	  prevN=1;
-      return 0;
-    }
-    return 1;
-  }
-  int expr_prime(){
-    if(lst[ind]==NULL)return 0;
-    if(lst[ind]->type==OP){
-      ind++;
-	  prevN=0;
-      if(term()==0)return expr_prime();
-    }
-    if((lst[ind]->type==PR)&&(lst[ind]->val==1)&&prevN){
-      ind++;
-	  cnt--;
-	  prevN=0;
-      return 0;
-    }
-  return 1;
-  }
-  int expr(){
-    if(lst[ind]==NULL&&cnt==0)return 0;
-    if(term())return 1;
-    return expr_prime();
-  }
-  
-  int ind=0,cnt=0,prevN;
-  printf("parsing...\n");
-  if(expr()==0&&lst[ind]==NULL)return 0;
-  return 1;
+	printf("parsing...\n");
+	if(expr()==0&&lst[ind]==NULL)return 0;
+	return 1;
 }
 
 void lex(token **lst,int *retSize){
@@ -206,37 +205,26 @@ int main(){
 		assemble();
   }
 
-	char *const arg1[]={"touch","test.o",NULL};
-	char *const arg2[]={"touch","test",NULL};
-	char *const arg3[]={"as","-o","test.o","output.asm",NULL};
-	char *const arg4[]={"ld","-o","test","test.o",NULL};
+	char *const arg1[]={"as","-o","test.o","output.asm",NULL};
+	char *const arg2[]={"ld","-o","test","test.o",NULL};
 
 	int retcode;
-	if(fork()==0){
-		execve("/usr/bin/touch",arg1,NULL);
-	}
-  wait(0);
-	
-	if(fork()==0){
-	  execve("/usr/bin/touch",arg2,NULL);
-	}
-  wait(0);
 	
   printf("assembling...\n");
 	if(fork()==0){
-		execve("/usr/bin/as",arg3,NULL);
+		execve("/usr/bin/as",arg1,NULL);
 	}
   wait(0);
 
   printf("linking...\n");
 	if(fork()==0){
-		execve("/usr/bin/ld",arg4,NULL);
+		execve("/usr/bin/ld",arg2,NULL);
 	}
   wait(0);
-
+	char *const args[]={"./test",NULL};
   printf("executing...\n");
 	if(fork()==0){
-		execv("test",NULL);
+		execv("./test",args);
 	}else{
     int s;
     wait(&s);
